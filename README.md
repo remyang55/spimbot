@@ -1,1 +1,1 @@
-# SpimBot -- ClubPenguinMasters
+# SpimBot by ClubPenguinMasters
