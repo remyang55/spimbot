@@ -3,7 +3,7 @@ PRINT_STRING            = 4
 PRINT_CHAR              = 11
 PRINT_INT               = 1
 
-SPEED_CONST             = 1
+SPEED_CONST             = 5
 
 # memory-mapped I/O
 VELOCITY                = 0xffff0010
@@ -36,7 +36,14 @@ REQUEST_PUZZLE_ACK      = 0xffff00d8  ## Puzzle
 RESPAWN_INT_MASK        = 0x2000      ## Respawn
 RESPAWN_ACK             = 0xffff00f0  ## Respawn
 
+
 .data
+# arctan constants
+three:  .float  3.0
+five:   .float  5.0
+PI:     .float  3.141592
+F180:   .float 180.0
+
 ### Puzzle
 puzzle:     .byte 0:268
 solution:   .byte 0:256
@@ -56,124 +63,136 @@ main:
     mtc0    $t4, $12
 
     jal     load_and_solve_puzzle
-    jal     load_and_solve_puzzle
-    jal     load_and_solve_puzzle
-    jal     load_and_solve_puzzle
-    jal     load_and_solve_puzzle
-    jal     load_and_solve_puzzle
-
-    # li      $a0, 60
-    # li      $a1, 20
-    # jal     m2p
-
-    # li      $t0, 90
-    # sw      $t0, ANGLE 
-    # li      $t0, 1 
-    # sw      $t0, ANGLE_CONTROL
-    # sw      $zero, SHOOT_UDP_PACKET
-
-    # li      $a0, 60
-    # li      $a1, 76
-    # jal     m2p
-    # sw      $zero, SHOOT_UDP_PACKET
-
-    # li      $a0, 60
-    # li      $a1, 132
-    # jal     m2p
-    # sw      $zero, SHOOT_UDP_PACKET
-
-    # li      $t0, 0
-    # sw      $t0, ANGLE 
-    # li      $t0, 1 
-    # sw      $t0, ANGLE_CONTROL
-    # sw      $zero, SHOOT_UDP_PACKET
-
-    # li      $a0, 156
-    # li      $a1, 132
-    # jal     m2p
-    # sw      $zero, SHOOT_UDP_PACKET
-
-    # li      $a0, 308
-    # li      $a1, 132
-    # jal     m2p
-
-    # li      $t0, 90
-    # sw      $t0, ANGLE 
-    # li      $t0, 1 
-    # sw      $t0, ANGLE_CONTROL
-
-    # li      $a0, 308
-    # li      $a1, 316
-    # jal     m2p
-
-    # li      $t0, 0
-    # sw      $t0, ANGLE 
-    # li      $t0, 1 
-    # sw      $t0, ANGLE_CONTROL
-    # sw      $zero, SHOOT_UDP_PACKET
+    li      $a0, 40
+    li      $a1, 40
+    jal     m2p
 
 do_nothing:
     j       do_nothing
 
 # @helper MOVE TO POINT. Moves the SPIMBot to (x, y), where $a0 = x, $a1 = y
 m2p:
-    lw      $t0, BOT_X
-    lw      $t1, BOT_Y
+    sub     $sp, $sp, 20
+    sw      $ra, 0($sp)
+    sw      $s0, 4($sp)
+    sw      $s1, 8($sp)
+    sw      $s2, 12($sp)
+    sw      $s3, 16($sp)
 
-    seq     $t2, $t0, $a0
-    seq     $t3, $t1, $a1
-    and     $t3, $t2, $t3
-    beq     $t3, $zero, set_vel_m2p
-    jr      $ra
+    move    $s2, $a0
+    move    $s3, $a1
 
-set_vel_m2p:
-    li      $t2, SPEED_CONST
-    sw      $t2, VELOCITY
+    li      $t0, SPEED_CONST
+    sw      $t0, VELOCITY
 
 while_m2p:
-    sne     $t2, $t0, $a0
-    sne     $t3, $t1, $a1
-    or      $t3, $t2, $t3
-    beq     $t3, $zero, kill_vel_m2p
+    lw      $s0, BOT_X
+    lw      $s1, BOT_Y
 
-    bge     $t1, $a1, else_y_m2p
-    li      $t2, 90
-    sw      $t2, ANGLE 
-    li      $t2, 1 
-    sw      $t2, ANGLE_CONTROL
-    j       back_to_while_m2p	
+    move    $a0, $s0
+    move    $a1, $s1
+    move    $a2, $s2
+    move    $a3, $s3
+    jal     euc_dist                    # $v0 has distance from (BOT_X, BOT_Y) to (x, y) after call
 
-else_y_m2p:
-    ble     $t1, $a1, if_x_m2p
-    li      $t2, 270
-    sw      $t2, ANGLE 
-    li      $t2, 1 
-    sw      $t2, ANGLE_CONTROL
-    j       back_to_while_m2p	
+    beq     $v0, $zero, kill_vel_m2p    # if distance to target == 0, stop bot   
 
-if_x_m2p:
-    bge     $t0, $a0, else_x_m2p
-    li      $t2, 0
-    sw      $t2, ANGLE 
-    li      $t2, 1 
-    sw      $t2, ANGLE_CONTROL
-    j       back_to_while_m2p
+    sub     $a0, $s2, $s0               
+    sub     $a1, $s3, $s1               
+    jal     sb_arctan                   # $v0 has angle from (BOT_X, BOT_Y) to (x, y) after call
 
-else_x_m2p:
-    li      $t2, 180
-    sw      $t2, ANGLE 
-    li      $t2, 1 
-    sw      $t2, ANGLE_CONTROL
+    sub     $t0, $s2, $s0   
+    blt     $t0, $zero, add180          # need to add 180 to arctan angle if (x - BOT_X) < 0
 
-back_to_while_m2p:
-    lw      $t0, BOT_X
-    lw      $t1, BOT_Y
+set_angle_m2p:
+    sw      $v0, ANGLE
+    li      $t0, 1
+    sw      $t0, ANGLE_CONTROL
     j       while_m2p
 
+add180:
+    add     $v0, $v0, 180
+    j       set_angle_m2p
+
 kill_vel_m2p:
-    li      $t2, 0
-    sw      $t2, VELOCITY
+    sw      $zero, VELOCITY
+    lw      $ra, 0($sp)
+    lw      $s0, 4($sp)
+    lw      $s1, 8($sp)
+    lw      $s2, 12($sp)
+    lw      $s3, 16($sp)
+    add     $sp, $sp, 20
     jr      $ra
+
+# -----------------------------------------------------------------------
+# sb_arctan - computes the arctangent of y / x
+# $a0 - x
+# $a1 - y
+# returns the arctangent in $v0
+# -----------------------------------------------------------------------
+sb_arctan:
+    li          $v0, 0           # angle = 0;
+    abs         $t0, $a0         # get absolute values
+    abs         $t1, $a1
+    ble         $t1, $t0, at_no_turn_90        ## if (abs(y) > abs(x)) { rotate 90 degrees }
+    move        $t0, $a1         # int temp = y;
+    neg         $a1, $a0         # y = -x;
+    move        $a0, $t0         # x = temp;
+    li          $v0, 90          # angle = 90;
+at_no_turn_90:
+    bgez        $a0, at_pos_x    # skip if (x >= 0)
+
+    ## if (x < 0)
+    add         $v0, $v0, 180    # angle += 180;
+at_pos_x:
+    mtc1        $a0, $f0
+    mtc1        $a1, $f1
+    cvt.s.w     $f0, $f0         # convert from ints to floats
+    cvt.s.w     $f1, $f1
+    div.s       $f0, $f1, $f0    # float v = (float) y / (float) x;
+    mul.s       $f1, $f0, $f0    # v^^2
+    mul.s       $f2, $f1, $f0    # v^^3
+    l.s         $f3, three       # load 3.0
+    div.s       $f3, $f2, $f3    # v^^3/3
+    sub.s       $f6, $f0, $f3    # v - v^^3/3
+    mul.s       $f4, $f1, $f2    # v^^5
+    l.s         $f5, five        # load 5.0
+    div.s       $f5, $f4, $f5    # v^^5/5
+    add.s       $f6, $f6, $f5    # value = v - v^^3/3 + v^^5/5
+    l.s         $f8, PI          # load PI
+    div.s       $f6, $f6, $f8    # value / PI
+    l.s         $f7, F180        # load 180.0
+    mul.s       $f6, $f6, $f7    # 180.0 * value / PI
+    cvt.w.s     $f6, $f6         # convert "delta" back to integer
+    mfc1        $t0, $f6
+    add         $v0, $v0, $t0    # angle += delta
+    bge         $v0, 0, at_end
+    # negative value received.
+    li          $t0, 360
+    add         $v0, $t0, $v0
+at_end:
+    jr          $ra
+
+# -----------------------------------------------------------------------
+# euc_dist - computes the euclidean distance between (x1, y1) and (x2, y2)
+# $a0 - x1
+# $a1 - y1
+# $a2 - x2
+# $a3 - y2
+# returns the (integer casted) euclidean distance in $v0
+# -----------------------------------------------------------------------
+euc_dist:
+    sub         $a0, $a2, $a0   # $a0 = (x2 - x1)
+    mul         $a0, $a0, $a0   # $a0 = (x2 - x1)^2
+    sub         $a1, $a3, $a1   # $a1 = (y2 - y1)
+    mul         $a1, $a1, $a1   # $a1 = (y2 - y1)^2
+    add         $v0, $a0, $a1   # $v0 = (x2 - x1)^2 + (y2 - y1)^2
+    mtc1        $v0, $f12       # $f12 = $v0
+    cvt.s.w     $f12, $f12      # cast $f12 to a float
+    sqrt.s      $f12, $f12      # $f12 = sqrt($f12)
+    cvt.w.s     $f12, $f12      # cast $f12 to an int
+    mfc1        $v0, $f12       # $v0 = $f12
+    jr          $ra
 
 
 # @helper LOAD AND SOLVE. Requests a puzzle and solves it
