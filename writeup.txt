@@ -1,1 +1,6 @@
-Strategy description
+Strategy description.
+  Our strategy is very simple; we simply traverse all the hosts once using a fixed,
+  hardcoded path. This path ensures that the bot will not run into any walls.
+  Steven calculated and coded the path for the right part of the map, and 
+  Rem calculated and coded the path for the left part of the map and wrote a small
+  function to move (in a straight line) to a point.
