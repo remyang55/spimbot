@@ -3,7 +3,7 @@ PRINT_STRING            = 4
 PRINT_CHAR              = 11
 PRINT_INT               = 1
 
-SPEED_CONST             = 5
+SPEED_CONST             = 1
 
 # memory-mapped I/O
 VELOCITY                = 0xffff0010
@@ -51,6 +51,12 @@ solution:   .byte 0:256
 has_puzzle: .word 0
 flashlight_space: .word 0
 
+# host locations
+# host_x: .word 27, 12, 14, 25, 7, 32, 5, 34, 13, 26, 6, 33, 13, 26, 2, 37         IN GRID COORDS
+# host_y: .word 12, 27, 14, 25, 7, 32, 13, 26, 5, 34, 33, 6, 37, 2, 26, 13         IN GRID COORDS
+host_x: .word 220, 100, 116, 204, 60, 260, 44, 276, 108, 212, 52, 268, 108, 212, 20, 300  # in pixel coords
+host_y: .word 100, 220, 116, 204, 60, 260, 108, 212, 44, 276, 268, 52, 300, 20, 212, 108  # in pixel coords
+
 .text
 main:
     # Construct interrupt mask
@@ -60,13 +66,73 @@ main:
     or      $t4, $t4, 1 # global enable
     mtc0    $t4, $12
 
-    jal     load_and_solve_puzzle
-    li      $a0, 40
-    li      $a1, 40
+    la      $s0, host_x
+    la      $s1, host_y
+
+    jal     find_host
+    sll     $t0, $v0, 2
+    add     $t1, $s1, $t0       # get &host_y
+    add     $t0, $s0, $t0       # get $host_x
+
+    lw      $a0, 0($t0)
+    lw      $a1, 0($t1)
     jal     m2p
 
 do_nothing:
     j       do_nothing
+
+# @helper FIND HOST. Finds the closest host, and returns its index in the arrays host_x and host_y
+find_host:
+    sub     $sp, $sp, 32
+    sw      $ra, 0($sp)
+    sw      $s0, 4($sp)
+    sw      $s1, 8($sp)
+    sw      $s2, 12($sp)
+    sw      $s3, 16($sp)
+    sw      $s4, 20($sp)
+    sw      $s5, 24($sp)
+    sw      $s6, 28($sp)
+
+    lw      $s0, BOT_X      # bot's position X
+    lw      $s1, BOT_Y      # bot's position Y
+    la      $s2, host_x     # base address of host_x array
+    la      $s3, host_y     # base address of host_y array
+    li      $s4, 10000      # current closest distance
+    li      $s5, 0          # index of host location that is closest to bot
+    li      $s6, 0          # i = 0
+
+for_find_host:
+    bge     $s6, 16, finish_find_host
+    sll     $t0, $s6, 2     # $t0 = i*4
+    add     $t1, $s3, $t0   
+    add     $t0, $s2, $t0   
+    lw      $a0, 0($t0)     # $a0 = host_x[i]
+    lw      $a1, 0($t1)     # $a1 = host_y[i]
+    move    $a2, $s0        # $a2 = BOT_X
+    move    $a3, $s1        # $a3 = BOt_Y
+    jal     euc_dist
+
+    bge     $v0, $s4, for_find_host_increment      # branch on (distance to point[i]) >= (current closest distance)
+    move    $s4, $v0                               # set current closest distance
+    move    $s5, $s6                               # set index of said point
+
+for_find_host_increment:
+    add     $s6, $s6, 1
+    j       for_find_host
+
+finish_find_host:
+    move    $v0, $s5        # return index of closest host
+
+    lw      $ra, 0($sp)
+    lw      $s0, 4($sp)
+    lw      $s1, 8($sp)
+    lw      $s2, 12($sp)
+    lw      $s3, 16($sp)
+    lw      $s4, 20($sp)
+    lw      $s5, 24($sp)
+    lw      $s6, 28($sp)
+    add     $sp, $sp, 32
+    jr      $ra
 
 # @helper MOVE TO POINT. Moves the SPIMBot to (x, y), where $a0 = x, $a1 = y
 m2p:
