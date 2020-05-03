@@ -3,7 +3,7 @@ PRINT_STRING            = 4
 PRINT_CHAR              = 11
 PRINT_INT               = 1
 
-SPEED_CONST             = 5
+SPEED_CONST             = 10
 
 # memory-mapped I/O
 VELOCITY                = 0xffff0010
@@ -36,7 +36,7 @@ REQUEST_PUZZLE_ACK      = 0xffff00d8  ## Puzzle
 RESPAWN_INT_MASK        = 0x2000      ## Respawn
 RESPAWN_ACK             = 0xffff00f0  ## Respawn
 
-NUM_PTS = 17
+NUM_PTS = 23
 
 .data
 # arctan constants
@@ -52,12 +52,19 @@ solution:   .byte 0:256
 has_puzzle: .word 0
 flashlight_space: .word 0
 
-# pt locations
-# pt_x: .word 27, 12, 14, 25, 7, 32, 5, 34, 13, 26, 6, 33, 13, 26, 2, 37                  IN GRID COORDS
-# pt_y: .word 12, 27, 14, 25, 7, 32, 13, 26, 5, 34, 33, 6, 37, 2, 26, 13                  IN GRID COORDS
-pt_x: .word 220, 100, 116, 204, 60, 260, 44, 276, 108, 212, 52, 268, 108, 212, 20, 300, 44
-pt_y: .word 100, 220, 116, 204, 60, 260, 108, 212, 44, 276, 268, 52, 300, 20, 212, 108, 124
-visited: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+# host locations
+# host_x: .word 27, 12, 14, 25, 7, 32, 5, 34, 13, 26, 6, 33, 13, 26, 2, 37                  IN GRID COORDS
+# host_y: .word 12, 27, 14, 25, 7, 32, 13, 26, 5, 34, 33, 6, 37, 2, 26, 13                  IN GRID COORDS
+# pt_x: .word 220, 100, 116, 204, 60, 260, 44, 276, 108, 212, 52, 268, 108, 212, 20, 300
+# pt_y: .word 100, 220, 116, 204, 60, 260, 108, 212, 44, 276, 268, 52, 300, 20, 212, 108 
+
+pt_x: .word 116, 204, 60, 260, 44, 276, 108, 212
+      .word 52, 124, 84, 52, 84, 92, 124, 116, 156, 196, 228, 268, 196, 268, 236
+
+pt_y: .word 116, 204, 60, 260, 108, 212, 44, 276
+      .word 124, 52, 52, 84, 84, 124, 92, 164, 204, 228, 196, 196, 268, 236, 268
+visited: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+         .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 .text
 main:
@@ -71,8 +78,10 @@ main:
     la      $s0, pt_x
     la      $s1, pt_y
     la      $s2, visited
+    li      $s5, 0      # count = 0
 
 run_game_loop:
+    bge     $s5, NUM_PTS, hardcode_loop
     lw      $t0, GET_BYTECOINS
     bge     $t0, 50, go_to_closest_pt     # don't need to solve puzzle if >= 50 coins
     jal     load_and_solve_puzzle
@@ -92,9 +101,57 @@ go_to_closest_pt:
 
     jal     m2p
 
-    bge     $s3, NUM_PTS, run_game_loop      # don't shoot packet if point is not a host
+    bge     $s3, 8, run_game_increment      # don't shoot packet if point is not a host
     sw      $zero, SHOOT_UDP_PACKET
+
+run_game_increment:
+    add     $s5, $s5, 1
     j       run_game_loop
+
+# simply go through, in a circle, the hosts at the bottom-right corner
+hardcode_loop:
+    #196, 228, 268, 196, 268, 236
+    #228, 196, 196, 268, 236, 268
+    li      $a0, 196
+    li      $a1, 228
+    jal     m2p
+    jal     load_and_solve_puzzle
+    li      $a0, 204
+    li      $a1, 204
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+    li      $a0, 228
+    li      $a1, 196
+    jal     m2p
+    li      $a0, 268
+    li      $a1, 196
+    jal     m2p
+    jal     load_and_solve_puzzle
+    li      $a0, 276
+    li      $a1, 212
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+    li      $a0, 268
+    li      $a1, 236
+    jal     m2p
+    jal     load_and_solve_puzzle
+    li      $a0, 260
+    li      $a1, 260
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+    li      $a0, 236
+    li      $a1, 268
+    jal     m2p
+    jal     load_and_solve_puzzle
+    li      $a0, 212
+    li      $a1, 276
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+    li      $a0, 196
+    li      $a1, 268
+    jal     m2p
+
+    j       hardcode_loop
 
 # @helper FIND POINT. Finds the closest valid point, and returns its index in the arrays pt_x and pt_y
 find_pt:
@@ -133,8 +190,8 @@ for_find_pt:
     move    $a3, $s1        # $a3 = BOt_Y
     jal     euc_dist
 
-    beq     $v0, $zero, for_find_pt_increment    # branch on (distance to point[i]) == 0 (which means we are already there!)
-    bge     $v0, $s4, for_find_pt_increment      # branch on (distance to point[i]) >= (current closest distance)
+    beq     $v0, $zero, for_find_pt_increment      # branch on (distance to point[i]) == 0 (which means we are already there!)
+    bge     $v0, $s4, for_find_pt_increment        # branch on (distance to point[i]) >= (current closest distance)
     move    $s4, $v0                               # set current closest distance
     move    $s5, $s6                               # set index of said point
 
@@ -188,18 +245,13 @@ while_m2p:
     sub     $a1, $s3, $s1               
     jal     sb_arctan                   # $v0 has angle from (BOT_X, BOT_Y) to (x, y) after call
 
-    sub     $t0, $s2, $s0   
-    #blt     $t0, $zero, add180          # need to add 180 to arctan angle if (x - BOT_X) < 0
+    sub     $t0, $s2, $s0
 
 set_angle_m2p:
     sw      $v0, ANGLE
     li      $t0, 1
     sw      $t0, ANGLE_CONTROL
     j       while_m2p
-
-add180:
-    add     $v0, $v0, 180
-    j       set_angle_m2p
 
 kill_vel_m2p:
     sw      $zero, VELOCITY
