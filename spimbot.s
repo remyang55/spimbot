@@ -44,13 +44,11 @@ five:   .float  5.0
 PI:     .float  3.141592
 F180:   .float 180.0
 
-### Puzzle
+# puzzle
 puzzle:     .byte 0:268
 solution:   .byte 0:256
-#### Puzzle
 
 has_puzzle: .word 0
-
 flashlight_space: .word 0
 
 .text
@@ -785,9 +783,9 @@ interrupt_dispatch:                 # Interrupt:
 bonk_interrupt:
     sw      $0, BONK_ACK
     #Fill in your bonk handler code here
-    li	    $t0, 90
-	sw	    $t0, ANGLE 
-	sw	    $zero, ANGLE_CONTROL
+    li      $t0, 90
+    sw      $t0, ANGLE
+    sw      $zero, ANGLE_CONTROL
     li      $t0, SPEED_CONST
     sw      $t0, VELOCITY
     j       interrupt_dispatch      # see if other interrupts are waiting
@@ -807,6 +805,8 @@ request_puzzle_interrupt:
 respawn_interrupt:
     sw      $0, RESPAWN_ACK
     #Fill in your respawn handler code here
+    li      $t0, SPEED_CONST
+    sw      $t0, VELOCITY
     j       interrupt_dispatch
 
 non_intrpt:                         # was some non-interrupt
