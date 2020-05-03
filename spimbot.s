@@ -36,7 +36,6 @@ REQUEST_PUZZLE_ACK      = 0xffff00d8  ## Puzzle
 RESPAWN_INT_MASK        = 0x2000      ## Respawn
 RESPAWN_ACK             = 0xffff00f0  ## Respawn
 
-NUM_PTS = 23
 
 .data
 # arctan constants
@@ -52,20 +51,6 @@ solution:   .byte 0:256
 has_puzzle: .word 0
 flashlight_space: .word 0
 
-# host locations
-# host_x: .word 27, 12, 14, 25, 7, 32, 5, 34, 13, 26, 6, 33, 13, 26, 2, 37                  IN GRID COORDS
-# host_y: .word 12, 27, 14, 25, 7, 32, 13, 26, 5, 34, 33, 6, 37, 2, 26, 13                  IN GRID COORDS
-# pt_x: .word 220, 100, 116, 204, 60, 260, 44, 276, 108, 212, 52, 268, 108, 212, 20, 300
-# pt_y: .word 100, 220, 116, 204, 60, 260, 108, 212, 44, 276, 268, 52, 300, 20, 212, 108 
-
-pt_x: .word 116, 204, 60, 260, 44, 276, 108, 212
-      .word 52, 124, 84, 52, 84, 92, 124, 116, 156, 196, 228, 268, 196, 268, 236
-
-pt_y: .word 116, 204, 60, 260, 108, 212, 44, 276
-      .word 124, 52, 52, 84, 84, 124, 92, 164, 204, 228, 196, 196, 268, 236, 268
-visited: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-         .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-
 .text
 main:
     # Construct interrupt mask
@@ -75,144 +60,137 @@ main:
     or      $t4, $t4, 1 # global enable
     mtc0    $t4, $12
 
-    la      $s0, pt_x
-    la      $s1, pt_y
-    la      $s2, visited
-    li      $s5, 0      # count = 0
-
-run_game_loop:
-    bge     $s5, NUM_PTS, hardcode_loop
-    lw      $t0, GET_BYTECOINS
-    bge     $t0, 50, go_to_closest_pt     # don't need to solve puzzle if >= 50 coins
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
     jal     load_and_solve_puzzle
 
-go_to_closest_pt:
-    jal     find_pt             # $v0 now has index of closest pt
-    move    $s3, $v0            # $s3 = index
-    sll     $t0, $v0, 2
-    add     $t2, $s2, $t0       # get &visited
-    add     $t1, $s1, $t0       # get &pt_y
-    add     $t0, $s0, $t0       # get $pt_x
-
-    lw      $a0, 0($t0)
-    lw      $a1, 0($t1)
-    li      $t0, 1
-    sw      $t0, 0($t2)
-
+    li      $a0, 12
+    li      $a1, 12
+    jal     m2p
+    li      $a0, 12
+    li      $a1, 108
     jal     m2p
 
-    bge     $s3, 8, run_game_increment      # don't shoot packet if point is not a host
+    li      $a0, 44
+    li      $a1, 108
+    jal     m2p
     sw      $zero, SHOOT_UDP_PACKET
 
-run_game_increment:
-    add     $s5, $s5, 1
-    j       run_game_loop
+    li      $a0, 60
+    li      $a1, 60
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
 
-# simply go through, in a circle, the hosts at the bottom-right corner
-hardcode_loop:
-    #196, 228, 268, 196, 268, 236
-    #228, 196, 196, 268, 236, 268
-    li      $a0, 196
+    li      $a0, 108
+    li      $a1, 44
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 124
+    li      $a1, 52
+    jal     m2p
+    li      $a0, 124
+    li      $a1, 100
+    jal     m2p
+
+    li      $a0, 116
+    li      $a1, 116
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+
+    #WALL PASS
+    li      $a0, 116
+    li      $a1, 196
+    jal     m2p
+    li      $a0, 108
+    li      $a1, 196
+    jal     m2p
+    li      $a0, 108
+    li      $a1, 204
+    jal     m2p
+
+    li      $a0, 100
+    li      $a1, 220
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 84
     li      $a1, 228
     jal     m2p
-    jal     load_and_solve_puzzle
+    li      $a0, 52
+    li      $a1, 228
+    jal     m2p
+    li      $a0, 36
+    li      $a1, 212
+    jal     m2p
+
+    li      $a0, 20
+    li      $a1, 212
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 12
+    li      $a1, 220
+    jal     m2p
+    li      $a0, 12
+    li      $a1, 268
+    jal     m2p
+
+    li      $a0, 52
+    li      $a1, 268
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 60
+    li      $a1, 308
+    jal     m2p
+    li      $a0, 100
+    li      $a1, 308
+    jal     m2p
+
+    li      $a0, 108
+    li      $a1, 300
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 100
+    li      $a1, 276
+    jal     m2p
+    li      $a0, 84
+    li      $a1, 260
+    jal     m2p
+
+    #WALL PASS
+    li      $a0, 116
+    li      $a1, 212
+    jal     m2p
+    li      $a0, 124
+    li      $a1, 212
+    jal     m2p
+    li      $a0, 124
+    li      $a1, 204
+    jal     m2p
+
     li      $a0, 204
     li      $a1, 204
     jal     m2p
     sw      $zero, SHOOT_UDP_PACKET
-    li      $a0, 228
-    li      $a1, 196
-    jal     m2p
-    li      $a0, 268
-    li      $a1, 196
-    jal     m2p
-    jal     load_and_solve_puzzle
-    li      $a0, 276
-    li      $a1, 212
-    jal     m2p
-    sw      $zero, SHOOT_UDP_PACKET
-    li      $a0, 268
-    li      $a1, 236
-    jal     m2p
-    jal     load_and_solve_puzzle
-    li      $a0, 260
-    li      $a1, 260
-    jal     m2p
-    sw      $zero, SHOOT_UDP_PACKET
-    li      $a0, 236
-    li      $a1, 268
-    jal     m2p
-    jal     load_and_solve_puzzle
-    li      $a0, 212
-    li      $a1, 276
-    jal     m2p
-    sw      $zero, SHOOT_UDP_PACKET
-    li      $a0, 196
-    li      $a1, 268
-    jal     m2p
 
-    j       hardcode_loop
-
-# @helper FIND POINT. Finds the closest valid point, and returns its index in the arrays pt_x and pt_y
-find_pt:
-    sub     $sp, $sp, 36
-    sw      $ra, 0($sp)
-    sw      $s0, 4($sp)
-    sw      $s1, 8($sp)
-    sw      $s2, 12($sp)
-    sw      $s3, 16($sp)
-    sw      $s4, 20($sp)
-    sw      $s5, 24($sp)
-    sw      $s6, 28($sp)
-    sw      $s7, 32($sp)
-
-    lw      $s0, BOT_X      # bot's position X
-    lw      $s1, BOT_Y      # bot's position Y
-    la      $s2, pt_x       # base address of pt_x array
-    la      $s3, pt_y       # base address of pt_y array
-    li      $s4, 10000      # current closest distance
-    li      $s5, 0          # index of pt location that is closest to bot
-    li      $s6, 0          # i = 0
-    la      $s7, visited
-
-for_find_pt:
-    bge     $s6, NUM_PTS, finish_find_pt
-    sll     $t0, $s6, 2     # $t0 = i*4
-    add     $t2, $s7, $t0
-    lw      $t2, 0($t2)
-    bne     $t2, $zero, for_find_pt_increment    # branch if pt already visited
-
-    add     $t1, $s3, $t0   
-    add     $t0, $s2, $t0   
-    lw      $a0, 0($t0)     # $a0 = pt_x[i]
-    lw      $a1, 0($t1)     # $a1 = pt_y[i]
-    move    $a2, $s0        # $a2 = BOT_X
-    move    $a3, $s1        # $a3 = BOt_Y
-    jal     euc_dist
-
-    beq     $v0, $zero, for_find_pt_increment      # branch on (distance to point[i]) == 0 (which means we are already there!)
-    bge     $v0, $s4, for_find_pt_increment        # branch on (distance to point[i]) >= (current closest distance)
-    move    $s4, $v0                               # set current closest distance
-    move    $s5, $s6                               # set index of said point
-
-for_find_pt_increment:
-    add     $s6, $s6, 1
-    j       for_find_pt
-
-finish_find_pt:
-    move    $v0, $s5        # return index of closest pt
-
-    lw      $ra, 0($sp)
-    lw      $s0, 4($sp)
-    lw      $s1, 8($sp)
-    lw      $s2, 12($sp)
-    lw      $s3, 16($sp)
-    lw      $s4, 20($sp)
-    lw      $s5, 24($sp)
-    lw      $s6, 28($sp)
-    lw      $s7, 32($sp)
-    add     $sp, $sp, 36
-    jr      $ra
+do_nothing:
+    j       do_nothing
 
 # @helper MOVE TO POINT. Moves the SPIMBot to (x, y), where $a0 = x, $a1 = y
 m2p:
@@ -924,12 +902,13 @@ interrupt_dispatch:                 # Interrupt:
 bonk_interrupt:
     sw      $0, BONK_ACK
     #Fill in your bonk handler code here
-    li      $t0, 90
-    sw      $t0, ANGLE
-    sw      $zero, ANGLE_CONTROL
-    li      $t0, 10
+    # li	    $t0, 90
+	# sw	    $t0, ANGLE 
+	# sw	    $zero, ANGLE_CONTROL
+    li      $t0, SPEED_CONST
     sw      $t0, VELOCITY
-    j       interrupt_dispatch      # see if other interrupts are waiting
+
+    j       interrupt_dispatch
 
 timer_interrupt:
     sw      $0, TIMER_ACK
