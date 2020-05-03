@@ -3,7 +3,7 @@ PRINT_STRING            = 4
 PRINT_CHAR              = 11
 PRINT_INT               = 1
 
-SPEED_CONST             = 1
+SPEED_CONST             = 5
 
 # memory-mapped I/O
 VELOCITY                = 0xffff0010
@@ -52,10 +52,11 @@ has_puzzle: .word 0
 flashlight_space: .word 0
 
 # host locations
-# host_x: .word 27, 12, 14, 25, 7, 32, 5, 34, 13, 26, 6, 33, 13, 26, 2, 37         IN GRID COORDS
-# host_y: .word 12, 27, 14, 25, 7, 32, 13, 26, 5, 34, 33, 6, 37, 2, 26, 13         IN GRID COORDS
+# host_x: .word 27, 12, 14, 25, 7, 32, 5, 34, 13, 26, 6, 33, 13, 26, 2, 37                  IN GRID COORDS
+# host_y: .word 12, 27, 14, 25, 7, 32, 13, 26, 5, 34, 33, 6, 37, 2, 26, 13                  IN GRID COORDS
 host_x: .word 220, 100, 116, 204, 60, 260, 44, 276, 108, 212, 52, 268, 108, 212, 20, 300  # in pixel coords
 host_y: .word 100, 220, 116, 204, 60, 260, 108, 212, 44, 276, 268, 52, 300, 20, 212, 108  # in pixel coords
+visited: .word 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 .text
 main:
@@ -68,22 +69,34 @@ main:
 
     la      $s0, host_x
     la      $s1, host_y
+    la      $s2, visited
 
-    jal     find_host
+run_game_loop:
+    lw      $t0, GET_BYTECOINS
+    bge     $t0, 50, go_to_closest_host     # don't need to solve puzzle if >= 50 coins
+    jal     load_and_solve_puzzle
+
+go_to_closest_host:
+    jal     find_host           # $v0 now has index of closest host
     sll     $t0, $v0, 2
+    add     $t2, $s2, $t0       # get &visited
     add     $t1, $s1, $t0       # get &host_y
     add     $t0, $s0, $t0       # get $host_x
 
     lw      $a0, 0($t0)
     lw      $a1, 0($t1)
+    li      $t0, 1
+    sw      $t0, 0($t2)
+
     jal     m2p
 
-do_nothing:
-    j       do_nothing
+    sw      $zero, SHOOT_UDP_PACKET
+
+    j       run_game_loop
 
 # @helper FIND HOST. Finds the closest host, and returns its index in the arrays host_x and host_y
 find_host:
-    sub     $sp, $sp, 32
+    sub     $sp, $sp, 36
     sw      $ra, 0($sp)
     sw      $s0, 4($sp)
     sw      $s1, 8($sp)
@@ -92,6 +105,7 @@ find_host:
     sw      $s4, 20($sp)
     sw      $s5, 24($sp)
     sw      $s6, 28($sp)
+    sw      $s7, 32($sp)
 
     lw      $s0, BOT_X      # bot's position X
     lw      $s1, BOT_Y      # bot's position Y
@@ -100,10 +114,15 @@ find_host:
     li      $s4, 10000      # current closest distance
     li      $s5, 0          # index of host location that is closest to bot
     li      $s6, 0          # i = 0
+    la      $s7, visited
 
 for_find_host:
     bge     $s6, 16, finish_find_host
     sll     $t0, $s6, 2     # $t0 = i*4
+    add     $t2, $s7, $t0
+    lw      $t2, 0($t2)
+    bne     $t2, $zero, for_find_host_increment    # branch if host already visited
+
     add     $t1, $s3, $t0   
     add     $t0, $s2, $t0   
     lw      $a0, 0($t0)     # $a0 = host_x[i]
@@ -112,6 +131,7 @@ for_find_host:
     move    $a3, $s1        # $a3 = BOt_Y
     jal     euc_dist
 
+    beq     $v0, $zero, for_find_host_increment    # branch on (distance to point[i]) == 0 (which means we are already there!)
     bge     $v0, $s4, for_find_host_increment      # branch on (distance to point[i]) >= (current closest distance)
     move    $s4, $v0                               # set current closest distance
     move    $s5, $s6                               # set index of said point
@@ -131,7 +151,8 @@ finish_find_host:
     lw      $s4, 20($sp)
     lw      $s5, 24($sp)
     lw      $s6, 28($sp)
-    add     $sp, $sp, 32
+    lw      $s7, 32($sp)
+    add     $sp, $sp, 36
     jr      $ra
 
 # @helper MOVE TO POINT. Moves the SPIMBot to (x, y), where $a0 = x, $a1 = y
@@ -166,7 +187,7 @@ while_m2p:
     jal     sb_arctan                   # $v0 has angle from (BOT_X, BOT_Y) to (x, y) after call
 
     sub     $t0, $s2, $s0   
-    blt     $t0, $zero, add180          # need to add 180 to arctan angle if (x - BOT_X) < 0
+    #blt     $t0, $zero, add180          # need to add 180 to arctan angle if (x - BOT_X) < 0
 
 set_angle_m2p:
     sw      $v0, ANGLE
@@ -852,7 +873,7 @@ bonk_interrupt:
     li      $t0, 90
     sw      $t0, ANGLE
     sw      $zero, ANGLE_CONTROL
-    li      $t0, SPEED_CONST
+    li      $t0, 10
     sw      $t0, VELOCITY
     j       interrupt_dispatch      # see if other interrupts are waiting
 
