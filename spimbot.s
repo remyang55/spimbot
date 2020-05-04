@@ -59,7 +59,22 @@ main:
     or      $t4, $t4, REQUEST_PUZZLE_INT_MASK           # puzzle interrupt bit
     or      $t4, $t4, 1 # global enable
     mtc0    $t4, $12
-
+    lw      $t0, BOT_X
+if:
+    bne     $t0, 316, done_if
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    j       second_player_start
+done_if:
     li      $a0, 12
     li      $a1, 12
     jal     m2p
@@ -83,6 +98,7 @@ go_again:
     jal     load_and_solve_puzzle
     jal     load_and_solve_puzzle
     jal     load_and_solve_puzzle
+    lw      $t0, BOT_X
 
     li      $a0, 12
     li      $a1, 108
@@ -211,6 +227,7 @@ go_again:
     li      $a1, 268
     jal     m2p
 
+second_player_start:
     li      $a0, 260
     li      $a1, 260
     jal     m2p
@@ -337,6 +354,14 @@ go_again:
 
     li      $a0, 60
     li      $a1, 60
+    jal     m2p
+
+    li      $a0, 52
+    li      $a1, 60
+    jal     m2p
+
+    li      $a0, 52
+    li      $a1, 100
     jal     m2p
 
     j       go_again
