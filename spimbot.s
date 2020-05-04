@@ -127,6 +127,13 @@ main:
     jal     m2p
     sw      $zero, SHOOT_UDP_PACKET
 
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+
     li      $a0, 84
     li      $a1, 228
     jal     m2p
@@ -188,6 +195,125 @@ main:
     li      $a1, 204
     jal     m2p
     sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 196
+    li      $a1, 276
+    jal     m2p
+
+    li      $a0, 204
+    li      $a1, 276
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 204
+    li      $a1, 268
+    jal     m2p
+
+    li      $a0, 260
+    li      $a1, 268
+    jal     m2p
+
+    li      $a0, 260
+    li      $a1, 260
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 268
+    li      $a1, 204
+    jal     m2p
+
+    li      $a0, 276
+    li      $a1, 212
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 268
+    li      $a1, 196
+    jal     m2p
+
+    li      $a0, 204
+    li      $a1, 196
+    jal     m2p
+
+    li      $a0, 204
+    li      $a1, 124
+    jal     m2p
+
+    li      $a0, 212
+    li      $a1, 124
+    jal     m2p
+    
+    li      $a0, 212
+    li      $a1, 100
+    jal     m2p
+
+    li      $a0, 220
+    li      $a1, 100
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 244
+    li      $a1, 84
+    jal     m2p
+    
+    li      $a0, 268
+    li      $a1, 84
+    jal     m2p
+
+    li      $a0, 268
+    li      $a1, 83
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 268
+    li      $a1, 92
+    jal     m2p
+
+    li      $a0, 284
+    li      $a1, 108
+    jal     m2p
+
+    li      $a0, 285
+    li      $a1, 108
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li      $a0, 284
+    li      $a1, 108
+    jal     m2p
+
+    li      $a0, 268
+    li      $a1, 92
+    jal     m2p
+
+    li      $a0, 260
+    li      $a1, 92
+    jal     m2p
+
+    li      $a0, 228
+    li      $a1, 60
+    jal     m2p
+
+    li      $a0, 228
+    li      $a1, 44
+    jal     m2p
+
+    li		$a0, 212
+    li		$a1, 44
+    jal     m2p
+
+    li		$a0, 212
+    li		$a1, 43
+    jal     m2p
+    sw      $zero, SHOOT_UDP_PACKET
+
+    li		$a0, 212
+    li		$a1, 44
+    jal     m2p
+    
 
 do_nothing:
     j       do_nothing
