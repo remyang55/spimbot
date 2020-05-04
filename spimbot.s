@@ -397,8 +397,6 @@ while_m2p:
     sub     $a1, $s3, $s1               
     jal     sb_arctan                   # $v0 has angle from (BOT_X, BOT_Y) to (x, y) after call
 
-    sub     $t0, $s2, $s0
-
 set_angle_m2p:
     sw      $v0, ANGLE
     li      $t0, 1
