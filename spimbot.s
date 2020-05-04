@@ -60,6 +60,13 @@ main:
     or      $t4, $t4, 1 # global enable
     mtc0    $t4, $12
 
+    li      $a0, 12
+    li      $a1, 12
+    jal     m2p
+go_again:
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
+    jal     load_and_solve_puzzle
     jal     load_and_solve_puzzle
     jal     load_and_solve_puzzle
     jal     load_and_solve_puzzle
@@ -77,9 +84,6 @@ main:
     jal     load_and_solve_puzzle
     jal     load_and_solve_puzzle
 
-    li      $a0, 12
-    li      $a1, 12
-    jal     m2p
     li      $a0, 12
     li      $a1, 108
     jal     m2p
@@ -126,13 +130,6 @@ main:
     li      $a1, 220
     jal     m2p
     sw      $zero, SHOOT_UDP_PACKET
-
-    jal     load_and_solve_puzzle
-    jal     load_and_solve_puzzle
-    jal     load_and_solve_puzzle
-    jal     load_and_solve_puzzle
-    jal     load_and_solve_puzzle
-    jal     load_and_solve_puzzle
 
     li      $a0, 84
     li      $a1, 228
@@ -314,9 +311,35 @@ main:
     li		$a1, 44
     jal     m2p
     
+    li      $a0, 228
+    li      $a1, 44
+    jal     m2p
 
-do_nothing:
-    j       do_nothing
+    li      $a0, 228
+    li      $a1, 108
+    jal     m2p
+
+    li      $a0, 196
+    li      $a1, 108
+    jal     m2p
+
+    li      $a0, 196
+    li      $a1, 116
+    jal     m2p
+
+    li      $a0, 196
+    li      $a1, 116
+    jal     m2p
+
+    li      $a0, 84
+    li	    $a1, 116
+    jal     m2p
+
+    li      $a0, 60
+    li      $a1, 60
+    jal     m2p
+
+    j       go_again
 
 # @helper MOVE TO POINT. Moves the SPIMBot to (x, y), where $a0 = x, $a1 = y
 m2p:
